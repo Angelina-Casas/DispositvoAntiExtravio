@@ -1,58 +1,94 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_application_2/controllers/bluetooth_controller.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import '../controllers/bluetooth_controller.dart';
 
 class ScanScreen extends StatefulWidget {
-  const ScanScreen({super.key});
+  final BluetoothController controller;
+  final String expectedName; // "ESP32_BT"
+
+  const ScanScreen({super.key, required this.controller, required this.expectedName});
 
   @override
   State<ScanScreen> createState() => _ScanScreenState();
 }
 
 class _ScanScreenState extends State<ScanScreen> {
-  final BluetoothController bluetooth = BluetoothController();
   bool scanning = false;
 
-  void startScan() async {
+  @override
+  void initState() {
+    super.initState();
+    _startScan();
+  }
+
+  Future<void> _startScan() async {
     setState(() => scanning = true);
-    await bluetooth.scanDevices();
+    await widget.controller.startScan(seconds: 4);
+    await Future.delayed(const Duration(milliseconds: 300));
     setState(() => scanning = false);
   }
 
-  void connect(ScanResult result) async {
-    bool ok = await bluetooth.connectDevice(result);
+  Future<void> _tryConnect(ScanResult r) async {
+    final name = r.device.name.isNotEmpty ? r.device.name : r.device.remoteId.id;
+    if (name != widget.expectedName) {
+      // quick check: show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ Este no es el dispositivo de la pulsera.')),
+      );
+      return;
+    }
+
+    // attempt connection
+    final ok = await widget.controller.connectToDevice(r, widget.expectedName);
+    if (!ok) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('❌ No se pudo conectar.')),
+      );
+      return;
+    }
+
+    // success -> go back to home
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? "✅ Conectado" : "❌ Error al conectar")),
+      const SnackBar(content: Text('✅ Conectado correctamente')),
     );
+
+    // return to previous screen
+    if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
+    final devices = widget.controller.foundDevices;
     return Scaffold(
-      appBar: AppBar(title: const Text("Buscar Dispositivo")),
+      appBar: AppBar(title: const Text('Buscar dispositivos')),
       body: Column(
         children: [
-          ElevatedButton(
-            onPressed: scanning ? null : startScan,
-            child: Text(scanning ? "Buscando..." : "Buscar Dispositivos"),
+          const SizedBox(height: 12),
+          ElevatedButton.icon(
+            onPressed: scanning ? null : _startScan,
+            icon: const Icon(Icons.search),
+            label: Text(scanning ? 'Buscando...' : 'Buscar dispositivos'),
           ),
+          const SizedBox(height: 12),
           Expanded(
-            child: ListView.builder(
-              itemCount: bluetooth.foundDevices.length,
-              itemBuilder: (_, i) {
-                final d = bluetooth.foundDevices[i];
-                return ListTile(
-                  title: Text(d.device.platformName.isNotEmpty
-                      ? d.device.platformName
-                      : d.device.remoteId.str),
-                  subtitle: Text(d.device.remoteId.str),
-                  trailing: ElevatedButton(
-                    child: const Text("Conectar"),
-                    onPressed: () => connect(d),
+            child: devices.isEmpty
+                ? const Center(child: Text('No se encontraron dispositivos'))
+                : ListView.separated(
+                    itemCount: devices.length,
+                    separatorBuilder: (_, __) => const Divider(),
+                    itemBuilder: (_, i) {
+                      final r = devices[i];
+                      final name = r.device.name.isNotEmpty ? r.device.name : r.device.remoteId.id;
+                      return ListTile(
+                        title: Text(name),
+                        subtitle: Text(r.device.remoteId.id),
+                        trailing: ElevatedButton(
+                          onPressed: () => _tryConnect(r),
+                          child: const Text('Conectar'),
+                        ),
+                      );
+                    },
                   ),
-                );
-              },
-            ),
           ),
         ],
       ),

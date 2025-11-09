@@ -99,7 +99,7 @@ class _ScanScreenState extends State<ScanScreen> {
             ElevatedButton.icon(
               onPressed: scanning ? null : _startScan,
               icon: const Icon(Icons.search),
-              label: Text(scanning ? 'Buscando...' : 'Buscar dispositivos'),
+              label: Text(scanning ? 'Buscando...' : 'Actualizar lista'),
               style: ElevatedButton.styleFrom(
                 foregroundColor: Colors.black,
                 backgroundColor: const Color(0xFF8BBCCC),

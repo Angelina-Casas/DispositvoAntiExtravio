@@ -14,7 +14,7 @@ class PulseraApp extends StatelessWidget {
     final bluetoothController = BluetoothController();
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Pulsera Antiextravio',
+      title: 'Dispositivo Antiextravio',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(
           seedColor: const Color(0xFF8BBCCC),

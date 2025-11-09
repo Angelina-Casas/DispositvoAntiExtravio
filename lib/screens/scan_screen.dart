@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:location/location.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import '../controllers/bluetooth_controller.dart';
 
 class ScanScreen extends StatefulWidget {
   final BluetoothController controller;
-  final String expectedName; // "ESP32_BT"
+  final String expectedName;
 
   const ScanScreen({super.key, required this.controller, required this.expectedName});
 
@@ -16,29 +18,58 @@ class _ScanScreenState extends State<ScanScreen> {
   bool scanning = false;
 
   @override
+  
   void initState() {
     super.initState();
+    _requestPermissionsThenScan();
+  }
+
+  Future<void> _requestPermissionsThenScan() async {
+    await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    await ensureGpsOn();
     _startScan();
   }
 
+  Future<void> ensureGpsOn() async {
+    Location location = Location();
+    bool enabled = await location.serviceEnabled();
+    if (!enabled) {
+      await location.requestService();
+    }
+  }
+
   Future<void> _startScan() async {
+    await [
+      Permission.bluetoothScan,
+      Permission.bluetoothConnect,
+      Permission.location,
+    ].request();
+
+    await ensureGpsOn();
+
     setState(() => scanning = true);
+
     await widget.controller.startScan(seconds: 4);
     await Future.delayed(const Duration(milliseconds: 300));
+
     setState(() => scanning = false);
   }
 
   Future<void> _tryConnect(ScanResult r) async {
     final name = r.device.name.isNotEmpty ? r.device.name : r.device.remoteId.id;
+
     if (name != widget.expectedName) {
-      // quick check: show error
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('❌ Este no es el dispositivo de la pulsera.')),
+        const SnackBar(content: Text('❌ Este no es el dispositivo correcto.')),
       );
       return;
     }
 
-    // attempt connection
     final ok = await widget.controller.connectToDevice(r, widget.expectedName);
     if (!ok) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -47,18 +78,17 @@ class _ScanScreenState extends State<ScanScreen> {
       return;
     }
 
-    // success -> go back to home
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('✅ Conectado correctamente')),
     );
 
-    // return to previous screen
     if (mounted) Navigator.of(context).pop(true);
   }
 
   @override
   Widget build(BuildContext context) {
     final devices = widget.controller.foundDevices;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Buscar dispositivos')),
       body: Column(

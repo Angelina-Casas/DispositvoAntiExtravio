@@ -1,18 +1,17 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="com.example.flutter_application_2">
 
-    <!-- PERMISOS PARA BLUETOOTH LE -->
+    <!-- PERMISOS BLUETOOTH -->
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_SCAN" />
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 
-    <!-- PERMISOS DE UBICACIÓN (necesarios para escanear BLE en Android 12+) -->
+    <!-- UBICACIÓN (NECESARIA PARA ESCANEAR BLE) -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
-    <!-- PERMISO PARA BUSCAR DISPOSITIVOS CERCANOS (Android 12+) -->
+    <!-- PARA ANDROID 12+ -->
     <uses-permission android:name="android.permission.NEARBY_WIFI_DEVICES"
         android:required="false" />
 
@@ -46,10 +45,14 @@
             android:value="2" />
     </application>
 
+    <!-- Habilitar búsqueda de dispositivos BLE -->
     <queries>
         <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
+            <action android:name="android.bluetooth.device.action.FOUND"/>
+        </intent>
+        <intent>
+            <action android:name="android.bluetooth.adapter.action.REQUEST_ENABLE"/>
         </intent>
     </queries>
+
 </manifest>

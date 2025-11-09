@@ -44,18 +44,20 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _showSoundNotification(String title, String body) async {
     const androidDetails = AndroidNotificationDetails(
-      'alert_channel', 'Alertas', channelDescription: 'Alertas de la pulsera',
-      importance: Importance.high, priority: Priority.high, playSound: true);
+      'alert_channel', 'Alertas',
+      channelDescription: 'Alertas de la pulsera',
+      importance: Importance.high,
+      priority: Priority.high,
+      playSound: true,
+    );
     const details = NotificationDetails(android: androidDetails);
     await _notifier.show(0, title, body, details);
   }
 
   Future<void> _applySideEffects(KidState s) async {
     if (s == KidState.gettingAway) {
-      // Play sound only
       await _showSoundNotification('Cuidado', 'El niño se está alejando. Por favor supervisar.');
     } else if (s == KidState.veryFar) {
-      // Play sound + vibrate
       await _showSoundNotification('¡ALERTA!', 'Niño muy lejos. Buscar ahora.');
       if (await Vibration.hasVibrator() ?? false) {
         Vibration.vibrate(duration: 800);
@@ -68,7 +70,7 @@ class _HomeScreenState extends State<HomeScreen> {
       case KidState.near:
         return Colors.green;
       case KidState.gettingAway:
-        return Colors.orange;
+        return Colors.blue;
       case KidState.veryFar:
         return Colors.red;
       default:
@@ -90,24 +92,21 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _openScan() async {
-    // open scan screen. if user connected, we pop with true
     final res = await Navigator.push<bool>(
       context,
       MaterialPageRoute(
         builder: (_) => ScanScreen(controller: widget.controller, expectedName: widget.expectedName),
       ),
     );
-
-    // If connected (res == true) we can update UI; controller.stateStream will update state
-    if (res == true) {
-      setState(() {});
-    }
+    if (res == true) setState(() {});
   }
 
   Future<void> _disconnect() async {
     await widget.controller.disconnect();
     setState(() => currentState = KidState.unknown);
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('🔴 Dispositivo desconectado')));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('🔴 Dispositivo desconectado')),
+    );
   }
 
   @override
@@ -124,13 +123,13 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        title: const Text('Dispositivo Antiextravio',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-          ),
+        title: const Text(
+          'Dispositivo Antiextravio',
+          style: TextStyle(fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
+
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -138,23 +137,40 @@ class _HomeScreenState extends State<HomeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color(0xFF8BBCCC), Color.fromARGB(255, 171, 217, 255)],
+            colors: [
+              Color(0xFF8BBCCC),
+              Color.fromARGB(255, 171, 217, 255)
+            ],
           ),
         ),
+
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Column(
             children: [
-              const SizedBox(height: 120),
 
-              // Estado y dispositivo
-              Container(
-                padding: const EdgeInsets.all(20),
+              const SizedBox(height: 90),
+
+              // CARITA DEL NIÑO (única)
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: 120,
+                width: 120,
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(.9),
+                  color: _stateColor().withOpacity(.85),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.child_care, size: 70, color: Colors.white),
+              ),
+              const SizedBox(height: 35),
+              // CUADRO DE ESTADO
+              Container(
+                padding: const EdgeInsets.all(22),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.92),
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(.15), blurRadius: 8),
+                    BoxShadow(color: Colors.black.withOpacity(.15), blurRadius: 10),
                   ],
                 ),
                 child: Column(
@@ -162,14 +178,14 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icon(
                       connected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
                       color: _stateColor(),
-                      size: 48,
+                      size: 50,
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 10),
                     Text(
                       connected ? 'Conectado a: $deviceName' : 'Sin conexión',
                       style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       _stateText(),
                       textAlign: TextAlign.center,
@@ -179,51 +195,42 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-              const SizedBox(height: 25),
+              const SizedBox(height: 35),
 
-              // Botones de acción
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  ElevatedButton.icon(
-                    style: ElevatedButton.styleFrom(
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                    ),
-                    onPressed: _openScan,
-                    icon: const Icon(Icons.search),
-                    label: const Text('Buscar dispositivo'),
-                  ),
-                  const SizedBox(width: 12),
-                  if (connected)
-                    ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                        backgroundColor: Colors.redAccent,
-                      ),
-                      onPressed: _disconnect,
-                      icon: const Icon(Icons.power_settings_new),
-                      label: const Text('Desconectar'),
-                    ),
-                ],
+              // BOTÓN BUSCAR
+              ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                ),
+                onPressed: _openScan,
+                icon: const Icon(Icons.search),
+                label: const Text(
+                  'Buscar dispositivo',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
               ),
+
+              const SizedBox(height: 14),
+
+              // BOTÓN DESCONECTAR
+              if (connected)
+                ElevatedButton.icon(
+                  style: ElevatedButton.styleFrom(
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    padding: const EdgeInsets.symmetric(horizontal: 26, vertical: 14),
+                    backgroundColor: Colors.redAccent,
+                  ),
+                  onPressed: _disconnect,
+                  icon: const Icon(Icons.power_settings_new),
+                  label: const Text(
+                    'Desconectar',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
 
               const Spacer(),
-
-              // Indicador visual grande
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 500),
-                height: 130,
-                width: 130,
-                decoration: BoxDecoration(
-                  color: _stateColor().withOpacity(.85),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(Icons.child_care, size: 70, color: Colors.white),
-              ),
-
-              const SizedBox(height: 60),
+              const SizedBox(height: 40),
             ],
           ),
         ),

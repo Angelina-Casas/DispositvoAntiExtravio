@@ -15,7 +15,14 @@ class PulseraApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'Pulsera Antiextravio',
-      theme: ThemeData(primarySwatch: Colors.blue),
+      theme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF8BBCCC),
+          brightness: Brightness.light,
+        ),
+        scaffoldBackgroundColor: const Color(0xFFF1FAFA),
+        useMaterial3: true,
+      ),
       home: HomeScreen(controller: bluetoothController, expectedName: 'ESP32_BT'),
     );
   }

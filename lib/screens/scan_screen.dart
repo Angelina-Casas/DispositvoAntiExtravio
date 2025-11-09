@@ -18,7 +18,6 @@ class _ScanScreenState extends State<ScanScreen> {
   bool scanning = false;
 
   @override
-  
   void initState() {
     super.initState();
     _requestPermissionsThenScan();
@@ -38,20 +37,10 @@ class _ScanScreenState extends State<ScanScreen> {
   Future<void> ensureGpsOn() async {
     Location location = Location();
     bool enabled = await location.serviceEnabled();
-    if (!enabled) {
-      await location.requestService();
-    }
+    if (!enabled) await location.requestService();
   }
 
   Future<void> _startScan() async {
-    await [
-      Permission.bluetoothScan,
-      Permission.bluetoothConnect,
-      Permission.location,
-    ].request();
-
-    await ensureGpsOn();
-
     setState(() => scanning = true);
 
     await widget.controller.startScan(seconds: 4);
@@ -90,37 +79,84 @@ class _ScanScreenState extends State<ScanScreen> {
     final devices = widget.controller.foundDevices;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Buscar dispositivos')),
-      body: Column(
-        children: [
-          const SizedBox(height: 12),
-          ElevatedButton.icon(
-            onPressed: scanning ? null : _startScan,
-            icon: const Icon(Icons.search),
-            label: Text(scanning ? 'Buscando...' : 'Buscar dispositivos'),
+      appBar: AppBar(
+        title: const Text('Buscar Dispositivos'), 
+        centerTitle: true,
+        backgroundColor:const Color(0xFF8BBCCC),
+      ),
+      body: Container(
+        width: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.white, Color(0xFFD6E9FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
           ),
-          const SizedBox(height: 12),
-          Expanded(
-            child: devices.isEmpty
-                ? const Center(child: Text('No se encontraron dispositivos'))
-                : ListView.separated(
-                    itemCount: devices.length,
-                    separatorBuilder: (_, __) => const Divider(),
-                    itemBuilder: (_, i) {
-                      final r = devices[i];
-                      final name = r.device.name.isNotEmpty ? r.device.name : r.device.remoteId.id;
-                      return ListTile(
-                        title: Text(name),
-                        subtitle: Text(r.device.remoteId.id),
-                        trailing: ElevatedButton(
-                          onPressed: () => _tryConnect(r),
-                          child: const Text('Conectar'),
-                        ),
-                      );
-                    },
-                  ),
-          ),
-        ],
+        ),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+            ElevatedButton.icon(
+              onPressed: scanning ? null : _startScan,
+              icon: const Icon(Icons.search),
+              label: Text(scanning ? 'Buscando...' : 'Buscar dispositivos'),
+              style: ElevatedButton.styleFrom(
+                foregroundColor: Colors.black,
+                backgroundColor: const Color(0xFF8BBCCC),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                textStyle: const TextStyle(fontSize: 18),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            ),
+            const SizedBox(height: 12),
+
+            if (scanning)
+              const Padding(
+                padding: EdgeInsets.all(12),
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+
+            Expanded(
+              child: devices.isEmpty
+                  ? const Center(
+                      child: Text(
+                        'No se encontraron dispositivos',
+                        style: TextStyle(fontSize: 16, color: Colors.black54),
+                      ),
+                    )
+                  : ListView.builder(
+                      itemCount: devices.length,
+                      itemBuilder: (_, i) {
+                        final r = devices[i];
+                        final name = r.device.name.isNotEmpty
+                            ? r.device.name
+                            : r.device.remoteId.id;
+
+                        return Card(
+                          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(15),
+                          ),
+                          elevation: 3,
+                          child: ListTile(
+                            leading: const Icon(Icons.bluetooth, color: Color.fromARGB(255, 3, 123, 179), size: 32),
+                            title: Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
+                            subtitle: Text(r.device.remoteId.id),
+                            trailing: ElevatedButton(
+                              onPressed: () => _tryConnect(r),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                              ),
+                              child: const Text('Conectar'),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

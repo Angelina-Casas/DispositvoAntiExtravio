@@ -114,55 +114,114 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     final connected = widget.controller.connectedDevice != null;
     final deviceName = connected
-        ? (widget.controller.connectedDevice!.name.isNotEmpty ? widget.controller.connectedDevice!.name : widget.controller.connectedDevice!.id)
+        ? (widget.controller.connectedDevice!.name.isNotEmpty
+            ? widget.controller.connectedDevice!.name
+            : widget.controller.connectedDevice!.id)
         : 'Ninguno';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Pulsera Antiextravio')),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            Card(
-              child: ListTile(
-                leading: Icon(connected ? Icons.bluetooth_connected : Icons.bluetooth_disabled, color: _stateColor(), size: 36),
-                title: Text(connected ? 'Conectado: $deviceName' : 'Estado: Desconectado'),
-                subtitle: Text(_stateText()),
-              ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton.icon(
-              onPressed: _openScan,
-              icon: const Icon(Icons.search),
-              label: const Text('Buscar dispositivo'),
-            ),
-            const SizedBox(height: 8),
-            if (connected)
-              ElevatedButton.icon(
-                onPressed: _disconnect,
-                icon: const Icon(Icons.power_settings_new),
-                label: const Text('Desconectar'),
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.redAccent),
-              ),
-            const SizedBox(height: 20),
-            // indicador grande
-            Expanded(
-              child: Center(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: const Text('Pulsera Antiextravio'),
+        centerTitle: true,
+      ),
+      body: Container(
+        width: double.infinity,
+        height: double.infinity,
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFF8BBCCC), Color.fromARGB(255, 171, 217, 255)],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              const SizedBox(height: 70),
+
+              // Estado y dispositivo
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(.9),
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(.15), blurRadius: 8),
+                  ],
+                ),
                 child: Column(
-                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.child_care, size: 72, color: _stateColor()),
-                    const SizedBox(height: 12),
+                    Icon(
+                      connected ? Icons.bluetooth_connected : Icons.bluetooth_disabled,
+                      color: _stateColor(),
+                      size: 48,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      connected ? 'Conectado a: $deviceName' : 'Sin conexión',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 4),
                     Text(
                       _stateText(),
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 18, color: _stateColor(), fontWeight: FontWeight.bold),
+                      style: TextStyle(fontSize: 16, color: _stateColor()),
                     ),
                   ],
                 ),
               ),
-            ),
-          ],
+
+              const SizedBox(height: 25),
+
+              // Botones de acción
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                    ),
+                    onPressed: _openScan,
+                    icon: const Icon(Icons.search),
+                    label: const Text('Buscar dispositivo'),
+                  ),
+                  const SizedBox(width: 12),
+                  if (connected)
+                    ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                        backgroundColor: Colors.redAccent,
+                      ),
+                      onPressed: _disconnect,
+                      icon: const Icon(Icons.power_settings_new),
+                      label: const Text('Desconectar'),
+                    ),
+                ],
+              ),
+
+              const Spacer(),
+
+              // Indicador visual grande
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 500),
+                height: 130,
+                width: 130,
+                decoration: BoxDecoration(
+                  color: _stateColor().withOpacity(.85),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.child_care, size: 70, color: Colors.white),
+              ),
+
+              const SizedBox(height: 60),
+            ],
+          ),
         ),
       ),
     );

@@ -63,6 +63,13 @@ class _HomeScreenState extends State<HomeScreen> {
         Vibration.vibrate(duration: 800);
       }
     }
+    if (s == KidState.sos) {
+      await _showSoundNotification('¡SOS!', 'El niño presionó el botón de ayuda.');
+      if (await Vibration.hasVibrator() ?? false) {
+        Vibration.vibrate(duration: 1500);
+      }
+      return;
+    }
   }
 
   Color _stateColor() {
@@ -151,7 +158,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
               const SizedBox(height: 90),
 
-              // CARITA DEL NIÑO (única)
+              // CARITA DEL NIÑO
               AnimatedContainer(
                 duration: const Duration(milliseconds: 500),
                 height: 120,

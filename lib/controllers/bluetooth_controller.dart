@@ -2,7 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
-enum KidState { unknown, near, gettingAway, veryFar }
+enum KidState { unknown, near, gettingAway, veryFar, sos }
 
 class BluetoothController {
   final List<ScanResult> foundDevices = [];
@@ -90,9 +90,15 @@ class BluetoothController {
   }
 
   void _handleIncoming(String txt) {
-    // Expecting "0", "1", "2"
     if (txt.isEmpty) return;
     final token = txt[0];
+
+    if (token == 'S') {
+      // BOTON SOS PRESIONADO
+      _stateController.add(KidState.sos);
+      return;
+    }
+
     switch (token) {
       case '0':
         _stateController.add(KidState.near);
@@ -107,6 +113,7 @@ class BluetoothController {
         _stateController.add(KidState.unknown);
     }
   }
+
 
   Future<void> disconnect() async {
     _charSub?.cancel();

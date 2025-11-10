@@ -29,7 +29,7 @@ class _ScanScreenState extends State<ScanScreen> {
       Permission.bluetoothConnect,
       Permission.location,
     ].request();
-
+    await ensureBluetoothOn();
     await ensureGpsOn();
     _startScan();
   }
@@ -38,6 +38,13 @@ class _ScanScreenState extends State<ScanScreen> {
     Location location = Location();
     bool enabled = await location.serviceEnabled();
     if (!enabled) await location.requestService();
+  }
+
+  Future<void> ensureBluetoothOn() async {
+    var adapterState = await FlutterBluePlus.adapterState.first;
+    if (adapterState != BluetoothAdapterState.on) {
+      await FlutterBluePlus.turnOn(); 
+    }
   }
 
   Future<void> _startScan() async {

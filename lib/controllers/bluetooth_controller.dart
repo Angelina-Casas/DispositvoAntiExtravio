@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 
 enum KidState { unknown, near, gettingAway, veryFar, sos }
@@ -7,10 +8,16 @@ enum KidState { unknown, near, gettingAway, veryFar, sos }
 class BluetoothController {
   final List<ScanResult> foundDevices = [];
   BluetoothDevice? connectedDevice;
+
   StreamSubscription<List<ScanResult>>? _scanSub;
   StreamSubscription<List<int>>? _charSub;
+  Timer? _rssiTimer;
+
   final StreamController<KidState> _stateController = StreamController.broadcast();
   Stream<KidState> get stateStream => _stateController.stream;
+
+  final StreamController<double> _distanceController = StreamController.broadcast();
+  Stream<double> get distanceStream => _distanceController.stream;
 
   Future<void> startScan({int seconds = 4}) async {
     foundDevices.clear();
@@ -29,77 +36,73 @@ class BluetoothController {
     await _scanSub?.cancel();
   }
 
-  /// Connects ONLY if the device name matches expectedName.
-  /// Returns true if connected, false otherwise.
   Future<bool> connectToDevice(ScanResult result, String expectedName) async {
     final device = result.device;
-
     final name = device.name.isNotEmpty ? device.name : result.device.remoteId.id;
-    if (name != expectedName) {
-      // not the expected device
-      return false;
-    }
+
+    if (name != expectedName) return false;
 
     try {
       await device.connect(timeout: const Duration(seconds: 8), autoConnect: false);
-    } catch (e) {
-      // ignore if already connected or throw other
-    }
+    } catch (e) {}
 
     connectedDevice = device;
 
-    // discover services and subscribe to first NOTIFY characteristic
+    // ⭐ 
     List<BluetoothService> services = await device.discoverServices();
     BluetoothCharacteristic? notifyChar;
 
     for (final s in services) {
       for (final c in s.characteristics) {
-        if (c.properties.notify == true) {
-          notifyChar = c;
-          break;
-        }
+        if (c.properties.notify) notifyChar = c;
       }
-      if (notifyChar != null) break;
     }
 
     if (notifyChar != null) {
-      // enable notifications
       try {
         await notifyChar.setNotifyValue(true);
         _charSub?.cancel();
         _charSub = notifyChar.value.listen((raw) {
           if (raw.isEmpty) return;
-          // try parse as ascii/utf8 number or single byte
           String txt;
           try {
-            txt = utf8.decode(raw);
-          } catch (e) {
+            txt = utf8.decode(raw).trim();
+          } catch (_) {
             txt = raw.first.toString();
           }
-          txt = txt.trim();
           _handleIncoming(txt);
         });
-      } catch (e) {
-        // if setNotifyValue fails, still ok
-      }
-    } else {
-      // no notify char: try to periodically read RSSI? we won't implement here
+      } catch (_) {}
     }
+
+    // ⭐ 
+    _rssiTimer?.cancel();
+    _rssiTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
+      try {
+        int rssi = await connectedDevice!.readRssi();
+        double distance = _estimateDistance(rssi);
+        _distanceController.add(distance);
+      } catch (_) {}
+    });
 
     return true;
   }
 
+  // ⭐ 
+  double _estimateDistance(int rssi) {
+    const int txPower = -59;
+    return pow(10, (txPower - rssi) / (10 * 2)).toDouble();
+  }
+
   void _handleIncoming(String txt) {
     if (txt.isEmpty) return;
-    final token = txt[0];
 
-    if (token == 'S') {
-      // BOTON SOS PRESIONADO
+    if (txt.startsWith("S")) {
       _stateController.add(KidState.sos);
       return;
     }
 
-    switch (token) {
+    switch (txt[0]) {
       case '0':
         _stateController.add(KidState.near);
         break;
@@ -114,22 +117,23 @@ class BluetoothController {
     }
   }
 
-
   Future<void> disconnect() async {
     _charSub?.cancel();
-    _charSub = null;
+    _rssiTimer?.cancel();
     if (connectedDevice != null) {
       try {
         await connectedDevice!.disconnect();
-      } catch (e) {}
-      connectedDevice = null;
+      } catch (_) {}
     }
+    connectedDevice = null;
     _stateController.add(KidState.unknown);
   }
 
   void dispose() {
     _scanSub?.cancel();
     _charSub?.cancel();
+    _rssiTimer?.cancel();
     _stateController.close();
+    _distanceController.close();
   }
 }

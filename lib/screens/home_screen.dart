@@ -169,7 +169,9 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
                 child: const Icon(Icons.child_care, size: 70, color: Colors.white),
               ),
+
               const SizedBox(height: 35),
+
               // CUADRO DE ESTADO
               Container(
                 padding: const EdgeInsets.all(22),
@@ -197,6 +199,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       _stateText(),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 16, color: _stateColor()),
+                    ),
+                    const SizedBox(height: 12),
+
+                    // ⭐ NUEVO ⭐
+                    StreamBuilder<double>(
+                      stream: widget.controller.distanceStream,
+                      builder: (context, snapshot) {
+                        double d = snapshot.data ?? double.nan;
+                        if (d.isNaN) return const SizedBox();
+                        String dist = d < 1
+                            ? "${(d * 100).toStringAsFixed(0)} cm"
+                            : "${d.toStringAsFixed(1)} m";
+                        return Text(
+                          "Distancia aproximada: $dist",
+                          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                          textAlign: TextAlign.center,
+                        );
+                      },
                     ),
                   ],
                 ),

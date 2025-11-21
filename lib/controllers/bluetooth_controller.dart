@@ -19,6 +19,8 @@ class BluetoothController {
   final StreamController<double> _distanceController = StreamController.broadcast();
   Stream<double> get distanceStream => _distanceController.stream;
 
+  BluetoothCharacteristic? _notifyChar;
+
   Future<void> startScan({int seconds = 4}) async {
     foundDevices.clear();
     await FlutterBluePlus.startScan(timeout: Duration(seconds: seconds));
@@ -44,26 +46,32 @@ class BluetoothController {
 
     try {
       await device.connect(timeout: const Duration(seconds: 8), autoConnect: false);
-    } catch (e) {}
+    } catch (e) {
+      // ignorar
+    }
 
     connectedDevice = device;
 
-    // ⭐ 
     List<BluetoothService> services = await device.discoverServices();
-    BluetoothCharacteristic? notifyChar;
+    _notifyChar = null;
 
     for (final s in services) {
       for (final c in s.characteristics) {
-        if (c.properties.notify) notifyChar = c;
+        if (c.properties.notify) {
+          _notifyChar ??= c;
+        }
       }
     }
 
-    if (notifyChar != null) {
+    if (_notifyChar != null) {
       try {
-        await notifyChar.setNotifyValue(true);
+        await _notifyChar!.setNotifyValue(true);
+
         _charSub?.cancel();
-        _charSub = notifyChar.value.listen((raw) {
+
+        _charSub = _notifyChar!.value.listen((raw) {
           if (raw.isEmpty) return;
+
           String txt;
           try {
             txt = utf8.decode(raw).trim();
@@ -72,30 +80,38 @@ class BluetoothController {
           }
           _handleIncoming(txt);
         });
-      } catch (_) {}
+      } catch (_) {
+        // ignorar
+      }
     }
-
-    // ⭐ 
-    _rssiTimer?.cancel();
-    _rssiTimer = Timer.periodic(const Duration(seconds: 2), (_) async {
-      try {
-        int rssi = await connectedDevice!.readRssi();
-        double distance = _estimateDistance(rssi);
-        _distanceController.add(distance);
-      } catch (_) {}
-    });
 
     return true;
   }
 
-  // ⭐ 
   double _estimateDistance(int rssi) {
     const int txPower = -59;
-    return pow(10, (txPower - rssi) / (10 * 2)).toDouble();
+    const double n = 2.0;
+    return pow(10, ((txPower - rssi) / (10 * n))).toDouble();
   }
 
   void _handleIncoming(String txt) {
     if (txt.isEmpty) return;
+
+    if (txt.startsWith("-")) {
+      final int rssi = int.tryParse(txt) ?? -90;
+      final double distance = _estimateDistance(rssi);
+
+      _distanceController.add(distance);
+
+      if (distance > 5) {
+        _stateController.add(KidState.veryFar);
+      } else if (distance > 3) {
+        _stateController.add(KidState.gettingAway);
+      } else {
+        _stateController.add(KidState.near);
+      }
+      return;
+    }
 
     if (txt.startsWith("S")) {
       _stateController.add(KidState.sos);
@@ -126,6 +142,7 @@ class BluetoothController {
       } catch (_) {}
     }
     connectedDevice = null;
+    _notifyChar = null;
     _stateController.add(KidState.unknown);
   }
 

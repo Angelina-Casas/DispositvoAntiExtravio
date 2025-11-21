@@ -45,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _showSoundNotification(String title, String body) async {
     const androidDetails = AndroidNotificationDetails(
       'alert_channel', 'Alertas',
-      channelDescription: 'Alertas de la pulsera',
+      channelDescription: 'Alertas del dispositivo antiextravio',
       importance: Importance.high,
       priority: Priority.high,
       playSound: true,
@@ -202,7 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // ⭐ NUEVO ⭐
+                   
                     StreamBuilder<double>(
                       stream: widget.controller.distanceStream,
                       builder: (context, snapshot) {
@@ -217,7 +217,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           textAlign: TextAlign.center,
                         );
                       },
-                    ),
+                    ), 
                   ],
                 ),
               ),
